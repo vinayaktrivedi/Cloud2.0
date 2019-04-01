@@ -1,5 +1,5 @@
 # SecureCloud
 
-#A Web Interface to store all your files in a crypographically secure way.
+```A Web Interface to store all your files in a crypographically secure way.```
 
-#Development would kick off soon.
+```Development would kick off soon.```
