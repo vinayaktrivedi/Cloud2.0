@@ -1,8 +1,8 @@
 <h1>{{.Name}}<h1>
 <ul>
     {{range $element := .Files }}
-        <a href="/download?file={{$element}}" class="done">{{$element}}</li>
+       <li> <a href="/download?file={{$element}}" class="done">{{$element}} </a> </li>
     {{end}}
 </ul>
-<a href="/upload/" class="done"> Upload </a>
+<a href="/upload/" class="done"> Upload </a> <br> <br>
 <a href="/logout/" class="done"> Logout </>
