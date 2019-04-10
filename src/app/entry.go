@@ -23,6 +23,7 @@ type MyUser struct {
     Files []string   //only exported (uppercase) variables can be used in template
 }
 
+var global_files map[string][]string
 
 func renderHTML(w http.ResponseWriter, p *MyUser, name string){
     err := templates.ExecuteTemplate(w,name,p)
@@ -39,16 +40,19 @@ func registerHandler (w http.ResponseWriter, r *http.Request) {
         username := r.FormValue("username")
         password := r.FormValue("password")
         User,err := storeit.InitUser(username,password)
-        fmt.Println(err)
+        if err!=nil{
+            http.Redirect(w, r, "/register/" , http.StatusFound)
+        }
         marshalled_user_struct, err := json.Marshal(&User)
         userlib.DatastoreSet(username,marshalled_user_struct)
-        if err!=nil{
-            http.Error(w, err.Error(), http.StatusInternalServerError)
-        }
+        login(w,r)
+        var myslice []string
+        global_files[username] = myslice
         var html_user MyUser 
         html_user.Name = username
         html_user.Username = username
         html_user.Image = "default"
+        html_user.Files = global_files[username]
         renderHTML(w,&html_user,"view.html")
     }else{
         http.Error(w, "Invalid request", http.StatusInternalServerError)
@@ -56,22 +60,23 @@ func registerHandler (w http.ResponseWriter, r *http.Request) {
 }
 func loginHandler(w http.ResponseWriter, r *http.Request) {
     if r.Method == http.MethodGet {
-        renderHTML(w,nil,"login.html")
+        val,_ := check_login(w,r)
+        if val == true{
+            http.Redirect(w, r, "/view/" , http.StatusFound)
+        }else{
+            renderHTML(w,nil,"login.html")    
+        }
+        
     }else if r.Method == http.MethodPost {
-        username := r.FormValue("username")
-        password := r.FormValue("password")
-        User,err := storeit.GetUser(username,password)
-        fmt.Println(err)
-        marshalled_user_struct, err := json.Marshal(&User)
-        userlib.DatastoreSet(username,marshalled_user_struct)
-        if err!=nil{
-            http.Error(w, err.Error(), http.StatusInternalServerError)
+        temp := login(w,r)
+        if(temp == nil){
+            http.Redirect(w, r, "/" , http.StatusFound)
         }
         var html_user MyUser 
-        html_user.Name = username
-        html_user.Username = username
+        html_user.Name = temp.Username
+        html_user.Username = temp.Username
         html_user.Image = "default"
-        html_user.Files = []string{"hello.pdf"}
+        html_user.Files = global_files[temp.Username]
         renderHTML(w,&html_user,"view.html")
     }else{
         http.Error(w, "Invalid request", http.StatusInternalServerError)
@@ -79,13 +84,15 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
-    fmt.Println("method:", r.Method)
-    fmt.Println("haha: ",http.MethodPost)
+    val,username := check_login(w,r)
+    if val == false{
+        http.Redirect(w, r, "/" , http.StatusFound)
+    }
     if r.Method == http.MethodGet {
         renderHTML(w,nil,"upload.html")
     }else if r.Method == http.MethodPost {
 
-        value, _ := userlib.DatastoreGet("vinayakt")
+        value, _ := userlib.DatastoreGet(username)
         var User storeit.User 
         unmarshal_err := json.Unmarshal(value,&User)
         if(unmarshal_err!=nil){
@@ -112,9 +119,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
         if err != nil {
             fmt.Println(err)
         }
-    // write this byte array to our temporary file
-    //tempFile.Write(fileBytes)
-    // return that we have successfully uploaded our file!
+
         iterations := len(fileBytes)/256 
         var flag int
         if len(fileBytes)%256 == 0 {
@@ -145,7 +150,9 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
             }
         }
         //fmt.Printf("MIME Header: %+v\n", handler.Header)
-        http.Error(w, "Good job", http.StatusInternalServerError)
+        global_files[username] = append(global_files[username],handler.Filename)
+        http.Redirect(w, r, "/" , http.StatusFound)
+
 
     }else{
         http.Error(w, "Invalid request", http.StatusInternalServerError)
@@ -153,29 +160,38 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 func viewHandler(w http.ResponseWriter, r *http.Request) {
+    val,username := check_login(w,r)
+    if val == false{
+        http.Redirect(w, r, "/" , http.StatusFound)
+    }
     if r.Method == http.MethodGet {
         var html_user MyUser 
-        html_user.Name = "vinayakt"
-        html_user.Username = "vinayakt"
+        html_user.Name = username
+        html_user.Username = username
         html_user.Image = "default"
-        html_user.Files = []string{"hello.pdf"}
+        html_user.Files = global_files[username]
         renderHTML(w,&html_user,"view.html")
-        renderHTML(w,nil,"view.html")
     }else{
         http.Error(w, "Invalid request", http.StatusInternalServerError)
     }
 
 }
 func downloadHandler(w http.ResponseWriter, r *http.Request) {
+    val,username := check_login(w,r)
+    if val == false{
+        http.Redirect(w, r, "/" , http.StatusFound)
+    }
     if r.Method == http.MethodGet {
-        value, _ := userlib.DatastoreGet("vinayakt")
+
+        value, _ := userlib.DatastoreGet(username)
         var User storeit.User 
         unmarshal_err := json.Unmarshal(value,&User)
         if(unmarshal_err!=nil){
-            http.Error(w, "Invalid request", http.StatusInternalServerError)
+            http.Redirect(w, r, "/" , http.StatusFound)
         }
-        filename := "hello.pdf"
-        data,err := User.LoadFile(filename)
+        filename := r.URL.Query()["file"]
+        fmt.Println(filename)
+        data,err := User.LoadFile(filename[0])
         if err!=nil{
             fmt.Println("laudap ",err)
         }
@@ -187,15 +203,26 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
     }
 }
 var path string
+
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+    val,_ := check_login(w,r)
+    if val == false{
+        http.Redirect(w, r, "/" , http.StatusFound)
+    }
+    logout(w,r)
+    http.Redirect(w, r, "/" , http.StatusFound)
+}
 func main() {
     path = build.Default.GOPATH
     template_folder := path+"/templates"
+    global_files = make(map[string][]string)
     templates = template.Must(template.ParseFiles(template_folder+"/login.html", template_folder+"/upload.html", template_folder+"/register.html",template_folder+"/view.html"))
     http.HandleFunc("/", loginHandler)
     http.HandleFunc("/view/", viewHandler)
     http.HandleFunc("/upload/", uploadHandler)
     http.HandleFunc("/register/", registerHandler)
     http.HandleFunc("/download/", downloadHandler)
+    http.HandleFunc("/logout/", logoutHandler)
     http.Handle("/static/assets/", http.StripPrefix("/static/assets/", http.FileServer(http.Dir(path+"/static/assets/"))))
     log.Fatal(http.ListenAndServe(":8080", nil))
 }
