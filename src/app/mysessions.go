@@ -24,9 +24,14 @@ func check_login(w http.ResponseWriter, r *http.Request) (bool,string) {
 }
 
 func login(w http.ResponseWriter, r *http.Request) *storeit.User {
-	session, _ := store.Get(r, "sessionid")
+	
 	username := r.FormValue("username")
     password := r.FormValue("password")
+    if _,err:=userlib.DatastoreGet(username); err==false {	//check if registered!
+    	return nil
+    }
+
+    session, _ := store.Get(r, "sessionid")
     User,err := storeit.GetUser(username,password)
     if err!=nil{
         

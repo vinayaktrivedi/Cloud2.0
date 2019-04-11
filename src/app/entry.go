@@ -9,8 +9,10 @@ import (
     "encoding/json"
     "storeit"
     "github.com/fenilfadadu/CS628-assn1/userlib"
-    "fmt"
+    //"fmt"
     "io/ioutil"
+    "strings"
+    "mime"
     //"mysessions"
 
 )
@@ -32,9 +34,17 @@ func renderHTML(w http.ResponseWriter, p *MyUser, name string){
     }
 }
 func registerHandler (w http.ResponseWriter, r *http.Request) {
-    fmt.Println("called")
+
     if r.Method == http.MethodGet {
-        renderHTML(w,nil,"register.html")
+        val,_ := check_login(w,r)
+        if val == true{
+            http.Redirect(w, r, "/view/" , http.StatusFound)
+            return
+        }else{
+            renderHTML(w,nil,"register.html")   
+            return
+        }
+        
 
     }else if r.Method == http.MethodPost {
         username := r.FormValue("username")
@@ -42,6 +52,7 @@ func registerHandler (w http.ResponseWriter, r *http.Request) {
         User,err := storeit.InitUser(username,password)
         if err!=nil{
             http.Redirect(w, r, "/register/" , http.StatusFound)
+            return
         }
         marshalled_user_struct, err := json.Marshal(&User)
         userlib.DatastoreSet(username,marshalled_user_struct)
@@ -54,8 +65,10 @@ func registerHandler (w http.ResponseWriter, r *http.Request) {
         html_user.Image = "default"
         html_user.Files = global_files[username]
         renderHTML(w,&html_user,"view.html")
+        return
     }else{
         http.Error(w, "Invalid request", http.StatusInternalServerError)
+        return
     }
 }
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -63,14 +76,19 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
         val,_ := check_login(w,r)
         if val == true{
             http.Redirect(w, r, "/view/" , http.StatusFound)
+            return
         }else{
             renderHTML(w,nil,"login.html")    
+            return
         }
         
     }else if r.Method == http.MethodPost {
+
         temp := login(w,r)
+        //fmt.Println("temp is ",temp)
         if(temp == nil){
             http.Redirect(w, r, "/" , http.StatusFound)
+            return
         }
         var html_user MyUser 
         html_user.Name = temp.Username
@@ -78,8 +96,10 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
         html_user.Image = "default"
         html_user.Files = global_files[temp.Username]
         renderHTML(w,&html_user,"view.html")
+        return
     }else{
         http.Error(w, "Invalid request", http.StatusInternalServerError)
+        return
     }
 
 }
@@ -87,9 +107,11 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
     val,username := check_login(w,r)
     if val == false{
         http.Redirect(w, r, "/" , http.StatusFound)
+        return
     }
     if r.Method == http.MethodGet {
         renderHTML(w,nil,"upload.html")
+        return
     }else if r.Method == http.MethodPost {
 
         value, _ := userlib.DatastoreGet(username)
@@ -97,13 +119,15 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
         unmarshal_err := json.Unmarshal(value,&User)
         if(unmarshal_err!=nil){
             http.Error(w, "Invalid request", http.StatusInternalServerError)
+            return
         }
         r.ParseMultipartForm(10 << 20)
     
-        file, handler, err := r.FormFile("myFile")
+        file, handler, err := r.FormFile("files")
         if err != nil {
-            fmt.Println("Error Retrieving the File")
-            fmt.Println(err)
+            http.Redirect(w, r, "/" , http.StatusFound)
+            //fmt.Println("Error Retrieving the File")
+            //fmt.Println(err)
             return
         }
         defer file.Close()
@@ -115,9 +139,10 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
         // defer tempFile.Close()
 
         fileBytes, err := ioutil.ReadAll(file)
-        fmt.Println(fileBytes)
+        //fmt.Println(fileBytes)
         if err != nil {
-            fmt.Println(err)
+            http.Redirect(w, r, "/" , http.StatusFound)
+            return
         }
 
         iterations := len(fileBytes)/256 
@@ -128,14 +153,15 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
             flag = 1
         }
         var i int
-        fmt.Println("file name is ",handler.Filename)
+        //fmt.Println("file name is ",handler.Filename)
         for i=0;i<iterations;i++ {
             if i==0 {
                 User.StoreFile(handler.Filename,fileBytes[i*256:(i+1)*256])
             }else{
                 err = User.AppendFile(handler.Filename,fileBytes[i*256:(i+1)*256])
                 if err != nil{
-                    fmt.Println("wrong :",err)
+                    http.Redirect(w, r, "/" , http.StatusFound)
+                    return
                 }
             }
         }
@@ -145,17 +171,20 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
             }else{
                 err = User.AppendFile(handler.Filename,fileBytes[i*256:])
                 if err != nil{
-                    fmt.Println("wrong :",err)
+                    http.Redirect(w, r, "/" , http.StatusFound)
+                    return
                 }
             }
         }
         //fmt.Printf("MIME Header: %+v\n", handler.Header)
         global_files[username] = append(global_files[username],handler.Filename)
         http.Redirect(w, r, "/" , http.StatusFound)
+        return
 
 
     }else{
         http.Error(w, "Invalid request", http.StatusInternalServerError)
+        return
     }
 
 }
@@ -163,6 +192,7 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
     val,username := check_login(w,r)
     if val == false{
         http.Redirect(w, r, "/" , http.StatusFound)
+        return
     }
     if r.Method == http.MethodGet {
         var html_user MyUser 
@@ -171,8 +201,10 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
         html_user.Image = "default"
         html_user.Files = global_files[username]
         renderHTML(w,&html_user,"view.html")
+        return
     }else{
         http.Error(w, "Invalid request", http.StatusInternalServerError)
+        return
     }
 
 }
@@ -180,6 +212,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
     val,username := check_login(w,r)
     if val == false{
         http.Redirect(w, r, "/" , http.StatusFound)
+        return
     }
     if r.Method == http.MethodGet {
 
@@ -188,18 +221,23 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
         unmarshal_err := json.Unmarshal(value,&User)
         if(unmarshal_err!=nil){
             http.Redirect(w, r, "/" , http.StatusFound)
+            return
         }
         filename := r.URL.Query()["file"]
-        fmt.Println(filename)
+        //fmt.Println(filename)
         data,err := User.LoadFile(filename[0])
         if err!=nil{
-            fmt.Println("laudap ",err)
+            http.Redirect(w, r, "/" , http.StatusFound)
+            return
         }
-        w.Header().Set("Content-type", "application/pdf")
+        header := strings.Split(filename[0],".")
+        //fmt.Println(mime.TypeByExtension("."+header[1]))
+        w.Header().Set("Content-type", mime.TypeByExtension("."+header[1]))
         w.Write(data)
-
+        return
     }else{
         http.Error(w, "Invalid request", http.StatusInternalServerError)
+        return
     }
 }
 var path string
@@ -208,9 +246,11 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
     val,_ := check_login(w,r)
     if val == false{
         http.Redirect(w, r, "/" , http.StatusFound)
+        return
     }
     logout(w,r)
     http.Redirect(w, r, "/" , http.StatusFound)
+    return
 }
 func main() {
     path = build.Default.GOPATH

@@ -1,8 +1,57 @@
-<h1>{{.Name}}<h1>
-<ul>
-    {{range $element := .Files }}
-       <li> <a href="/download?file={{$element}}" class="done">{{$element}} </a> </li>
-    {{end}}
-</ul>
-<a href="/upload/" class="done"> Upload </a> <br> <br>
-<a href="/logout/" class="done"> Logout </>
+
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+	<link href="/static/assets/custom.css" rel="stylesheet">
+	<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+	<script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+</head>
+<body>
+	<div class="container">
+    <div class="row profile">
+		<div class="col-md-10">
+			<div class="profile-sidebar">
+				<!-- SIDEBAR USERPIC -->
+				<div class="profile-userpic">
+					<img src="http://keenthemes.com/preview/metronic/theme/assets/admin/pages/media/profile/profile_user.jpg" class="img-responsive" alt="">
+				</div>
+				<!-- END SIDEBAR USERPIC -->
+				<!-- SIDEBAR USER TITLE -->
+				<div class="profile-usertitle">
+					<div class="profile-usertitle-name">
+						<h1> {{.Name}} </h1>
+					</div>
+					<div class="profile-usertitle-job">
+						<h1> {{.Username}} </h1>
+					</div>
+				</div>
+				<!-- END SIDEBAR USER TITLE -->
+				<!-- SIDEBAR BUTTONS -->
+				<div class="profile-userbuttons">
+					<a href="/upload/" class="btn btn-success btn-lg"> Upload </a>
+					<a href="/logout/" class="btn btn-danger btn-lg">Logout </a> 
+				</div>
+				<!-- END SIDEBAR BUTTONS -->
+				<!-- SIDEBAR MENU -->
+				<div class="profile-usermenu">
+					<ul class="nav">
+						{{range $element := .Files }}
+       						<li class="active"> <a href="/download?file={{$element}}"> <h2> {{$element}} &emsp; <i class="glyphicon glyphicon-file"></i> </h2>  </a> </li>
+    					{{end}}
+						
+						
+					</ul>
+				</div>
+				<!-- END MENU -->
+			</div>
+		</div>
+		
+	</div>
+</div>
+</body>
+</html>
+
+
+

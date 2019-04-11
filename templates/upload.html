@@ -1,12 +1,55 @@
+<!DOCTYPE html>
 <html>
 <head>
-       <title>Upload file</title>
+  <title></title>
+  <link href="//netdna.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+<link href="/static/assets/upload.css" rel="stylesheet">
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+<script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
+<script src="/static/assets/custom.js" ></script>
 </head>
 <body>
-<form enctype="multipart/form-data" action="/upload/" method="POST">
-    <input type="file" name="myFile" />
-    <input type="hidden" name="token" value="{{.}}"/>
-    <input type="submit" value="upload" />
-</form>
+  <div class="container">
+      <div class="panel panel-default">
+        <div class="panel-heading"><strong>Upload Files</strong> </div>
+        <div class="panel-body">
+
+          <!-- Standar Form -->
+          <h4>Select files from your computer</h4>
+          <form action="/upload/" method="post" enctype="multipart/form-data" id="js-upload-form">
+            <div class="form-inline">
+              <div class="form-group">
+                <input type="file" name="files" id="js-upload-files" multiple>
+              </div>
+              <button type="submit" class="btn btn-sm btn-primary" id="js-upload-submit">Upload files</button>
+            </div>
+          </form>
+
+          <!-- Drop Zone -->
+          <!-- <h4>Or drag and drop files below</h4>
+          <div class="upload-drop-zone" id="drop-zone">
+            Just drag and drop files here
+          </div> -->
+
+          <!-- Progress Bar -->
+         <!--  <div class="progress">
+            <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 60%;">
+              <span class="sr-only">0% Complete</span>
+            </div>
+          </div>
+ -->
+          <!-- Upload Finished -->
+         <!--  <div class="js-upload-finished">
+            <h3>Processed files</h3>
+            <div class="list-group">
+              
+            </div>
+          </div> -->
+        </div>
+      </div>
+    </div> <!-- /container -->
 </body>
 </html>
+
+<!------ Include the above in your HEAD tag ---------->
+
