@@ -6,7 +6,7 @@ package storeit
 import (
   // You neet to add with
   // go get github.com/fenilfadadu/CS628-assn1/userlib
-  "github.com/fenilfadadu/CS628-assn1/userlib"
+  "userlib"
 
   // Life is much easier with json:  You are
   // going to want to use this so you can easily
@@ -15,6 +15,7 @@ import (
 
   // Likewise useful for debugging etc
   "encoding/hex"
+  
 
   // UUIDs are generated right based on the crypto RNG
   // so lets make life easier and use those too...
@@ -210,7 +211,16 @@ func InitUser(username string, password string) (userdataptr *User, err error) {
   // It will be encrypted later when stored in persistant datastore
   userdata.Username = username
   userdata.Password = password
-
+  var list []string
+  temp,_ := userlib.DatastoreGet("users")
+  json.Unmarshal(temp,&list)
+  
+  for _, current := range list {
+        if current == username {
+            return nil,errors.New(strings.ToTitle("User exists"))
+        }
+  }
+  
   // Salt is generated randomly and stored in plaintext
   userdata.Salt = hex.EncodeToString(userlib.RandomBytes(userlib.AESKeySize))
 
@@ -274,6 +284,9 @@ func InitUser(username string, password string) (userdataptr *User, err error) {
   }
   userlib.DatastoreSet(userdata.User_Key, marshalled_user_struct)
 
+  list = append(list,username)
+  tostore,_ := json.Marshal(list)
+  userlib.DatastoreSet("users",tostore)
   return &userdata, nil
 }
 
@@ -422,6 +435,11 @@ func (userdata *User) StoreFile (filename string, data []byte) {
   encryption_key := userlib.Argon2Key(decoded_filetoken, []byte("filesecretsalt") , 32)
 
   encrypted_data := getCFBEncryptedData(data,encryption_key)
+  // store,_ := hex.DecodeString(encrypted_data)
+  // err = ioutil.WriteFile("file.pdf", store, 777)
+  // if err != nil { 
+  //     // handle error
+  // }
 
   var appendstruct Append
   appendstruct.Data = encrypted_data

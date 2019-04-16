@@ -17,8 +17,11 @@ import (
 
 	"crypto/aes"
 	"crypto/cipher"
+
+	"encoding/json"
 	// Need to run go get to get this
 	"golang.org/x/crypto/argon2"
+	"io/ioutil"
 )
 
 // RSA private key's type
@@ -65,20 +68,19 @@ var keystore = make(map[string]rsa.PublicKey)
 // Sets the value in the datastore
 // Changed it to be copying
 func DatastoreSet(key string, value []byte) {
-	foo := make([]byte, len(value))
-	copy(foo, value)
-	datastore[key] = foo
+	err := ioutil.WriteFile("Datastore"+key, value, 777)
+	if err!=nil{
+		//fmt.Println(err)
+	}
 }
 
 // Returns the value if it exists
 func DatastoreGet(key string) (value []byte, ok bool) {
-	value, ok = datastore[key]
-	if ok && value != nil {
-		foo := make([]byte, len(value))
-		copy(foo, value)
-		return foo, ok
+	data, err := ioutil.ReadFile("Datastore"+key)
+	if err!=nil{
+		return data,false
 	}
-	return
+	return data,true
 }
 
 // Deletes a key
@@ -96,12 +98,26 @@ func KeystoreClear() {
 }
 
 func KeystoreSet(key string, value rsa.PublicKey) {
-	keystore[key] = value
+	marshal,err := json.Marshal(value)
+	if err!=nil{
+
+	}
+	ioutil.WriteFile("keystore"+key,marshal,777)
+
 }
 
 func KeystoreGet(key string) (value rsa.PublicKey, ok bool) {
-	value, ok = keystore[key]
-	return
+	var final rsa.PublicKey
+	data, err := ioutil.ReadFile("keystore"+key)
+	if err!=nil{
+		return final,false
+	}
+	err = json.Unmarshal(data,&final)
+	if err!=nil{
+		return final,false
+
+	}
+	return final,true
 }
 
 // Use this in testing to get the underlying map if you want
